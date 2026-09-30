@@ -1,0 +1,23 @@
+{
+  "variants": [
+    {
+      "id": "ai_automation",
+      "pdf_name": "sample_ai_automation_resume.pdf",
+      "focus_terms": ["AI", "LLM", "RAG", "Copilot Studio", "Python", "workflow automation", "Next.js"],
+      "overleaf_git_url": null
+    },
+    {
+      "id": "power_platform",
+      "pdf_name": "sample_power_platform_resume.pdf",
+      "focus_terms": ["Power Platform", "Power Apps", "Power Automate", "Dataverse", "Power Pages", "SharePoint", "Copilot Studio"],
+      "overleaf_git_url": null
+    },
+    {
+      "id": "business_operations",
+      "pdf_name": "sample_business_operations_resume.pdf",
+      "focus_terms": ["operations", "B2B", "supplier", "export", "process improvement", "Power BI", "automation"],
+      "overleaf_git_url": null
+    }
+  ],
+  "unresolved_fact_conflicts": []
+}

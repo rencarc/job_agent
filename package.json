@@ -1,0 +1,7 @@
+{
+  "name": "auditable-job-agent-browser",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {"test:browser": "node --test browser/*.test.cjs"},
+  "dependencies": {"playwright": "1.62.1"}
+}

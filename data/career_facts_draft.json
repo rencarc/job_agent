@@ -1,0 +1,33 @@
+{
+  "sources": [
+    "sample_ai_resume.pdf",
+    "sample_power_platform_resume.pdf",
+    "sample_business_operations_resume.pdf"
+  ],
+  "facts": [
+    {
+      "id": "sample_title_ai",
+      "claim": "Sample Applicant held a Business & Operations Manager role in a fictional resume variant.",
+      "terms": ["AI", "operations manager"],
+      "sources": ["sample_ai_resume.pdf"]
+    },
+    {
+      "id": "sample_power_platform",
+      "claim": "Sample Applicant built fictional case management workflows with Power Pages, Power Apps, Dataverse and SharePoint.",
+      "terms": ["Power Apps", "Dataverse", "SharePoint", "Power Pages"],
+      "sources": ["sample_power_platform_resume.pdf"]
+    },
+    {
+      "id": "sample_python",
+      "claim": "Sample Applicant used Python for fictional automation and data processing tasks.",
+      "terms": ["Python", "automation"],
+      "sources": ["all_three"]
+    },
+    {
+      "id": "sample_business_ops",
+      "claim": "Sample Applicant worked with fictional business operations, supplier coordination and process improvement.",
+      "terms": ["business operations", "supplier", "process improvement"],
+      "sources": ["sample_business_operations_resume.pdf"]
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "answers": [
+    {
+      "id": "power_platform_experience",
+      "fact_ids": ["sample_power_platform"],
+      "en": "In a sample project, the applicant built case management workflows using Power Pages, Power Apps and Dataverse.",
+      "sv": "I ett exempelprojekt byggde kandidaten ärendeflöden med Power Pages, Power Apps och Dataverse.",
+      "approved": false
+    }
+  ]
+}

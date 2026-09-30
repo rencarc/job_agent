@@ -1,0 +1,26 @@
+{
+  "total": {"value": 2},
+  "hits": [
+    {
+      "id": "31499139",
+      "webpage_url": "https://arbetsformedlingen.se/platsbanken/annonser/31499139",
+      "headline": "AI Expert",
+      "description": {"text": "Build reliable generative AI applications and agentic systems."},
+      "employer": {"name": "The Link Factor AB"},
+      "workplace_address": {"city": "Stockholm", "municipality": "Stockholm", "region": "Stockholms län"},
+      "workplace_model": {"label": "Hybrid"},
+      "application_details": {"url": "https://example.test/jobs/31499139"},
+      "publication_date": "2026-09-21T09:51:00"
+    },
+    {
+      "id": "31499140",
+      "webpage_url": "https://arbetsformedlingen.se/platsbanken/annonser/31499140",
+      "headline": "Power Platform Developer",
+      "description": {"text": "Build Copilot Studio and Power Automate solutions."},
+      "employer": {"name": "Example AB"},
+      "workplace_address": {"municipality": "Solna", "region": "Stockholms län"},
+      "application_details": {"url": null},
+      "publication_date": "2026-09-22T08:00:00"
+    }
+  ]
+}

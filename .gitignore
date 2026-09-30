@@ -1,0 +1,17 @@
+private/
+output/
+tmp/
+reports/
+node_modules/
+__pycache__/
+*.py[cod]
+*.sqlite
+*.db
+.env
+.env.*
+!.env.example
+*.pdf
+*.docx
+*.log
+chrome-profile-*/
+*profile*/
