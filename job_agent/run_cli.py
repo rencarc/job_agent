@@ -16,6 +16,7 @@ from .discovery import discover_many
 from .http_read import JsonReader
 from .models import Job
 from .materials import load_catalog, prepare_materials
+from .local_history import LocalApplicationHistory
 from .search_settings import load_search_settings
 from .sources.ats import PublicBoardSource
 from .sources.jobtech import JobTechSource
@@ -66,6 +67,7 @@ def main():
     parser.add_argument("--offline-jobs", type=Path, help="Replay a local jobs snapshot; performs no network reads")
     parser.add_argument("--preview", action="store_true", help="Evaluate a draft profile without actionable tasks or Airtable reads")
     parser.add_argument("--resume-catalog", type=Path, help="Create local preparation plans using reviewed PDFs; never submits")
+    parser.add_argument("--application-ledger", type=Path, help="Read an existing local submission ledger before evaluating jobs")
     args = parser.parse_args()
     try:
         settings, profile = load_search_settings(args.settings), load_profile(args.profile, allow_draft=args.preview)
@@ -75,6 +77,7 @@ def main():
             raise ValueError("max-requests must be 1..1000 and scan-seconds 1..3600")
         limits = Limits(max_evaluations=args.max_evaluations, max_seconds=args.evaluation_seconds)
         catalog = load_catalog(args.resume_catalog, profile, preview=args.preview) if args.resume_catalog else None
+        local_history = LocalApplicationHistory(args.application_ledger) if args.application_ledger else None
         with JobStore(args.db) as store:
             store.bind_mode("preview" if args.preview else "production")
             # The outer lease also protects scan checkpoints from overlapping timers.
@@ -110,7 +113,9 @@ def main():
                 # Coverage is saved even if a later matching stage fails.
                 stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S") + "_" + uuid.uuid4().hex[:8]
                 atomic_json(args.output_dir / f"coverage_{stamp}.json", coverage)
-                report = run_pipeline(store, jobs, profile, history_records=history, limits=limits, preview=args.preview)
+                report = run_pipeline(store, jobs, profile, history_records=history, limits=limits,
+                                      preview=args.preview, local_history=local_history)
+                report["local_history_checked"] = local_history is not None
                 report["network"] = network
                 source_statuses = [s["status"] for s in coverage["sources"]]
                 if any(s != "ok" for s in source_statuses):

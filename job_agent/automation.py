@@ -148,7 +148,7 @@ def rule_match(job: Job, profile: dict) -> dict:
 
 def run_pipeline(store: JobStore, jobs: list[Job], profile: dict, *, history_records=None,
                  limits: Limits = Limits(), evaluator=None, evaluator_version: str = "",
-                 clock=time.monotonic, preview: bool = False) -> dict:
+                 clock=time.monotonic, preview: bool = False, local_history=None) -> dict:
     """Ingest before scoring; retry deferred items from disk on the next run.
 
     An optional evaluator returns {priority, tokens}; it can annotate priority,
@@ -180,6 +180,17 @@ def run_pipeline(store: JobStore, jobs: list[Job], profile: dict, *, history_rec
             # record must immediately suppress a formerly prepared task.
             for job_id, job in store.jobs():
                 key = digest([job_id, content_hash(job), profile_hash, RULE_VERSION, evaluator_version])
+                # Check the durable submission fence before scoring or model
+                # dispatch. It is transient routing state, never a cached match.
+                local = local_history.match(job) if local_history is not None else None
+                if local is not None and local.action != "new":
+                    decision = "skip" if local.action == "blocked" else "exception"
+                    result = {"decision": decision, "reasons": [local.reason], "can_submit": False,
+                              "local_history": local.action, "location_priority": location_priority(job, profile)}
+                    if preview:
+                        result.update(decision="preview", suggested_decision=decision, routing_decision=decision)
+                    store.enqueue(job_id, key, result)
+                    continue
                 result = store.cached(key)
                 if result is not None:
                     report["cached"] += 1

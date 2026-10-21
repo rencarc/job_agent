@@ -2,12 +2,39 @@
 from __future__ import annotations
 
 import json
+import re
 from hashlib import file_digest
 from pathlib import Path
 
 from .models import Job
+from .dedup import duplicate_match
 from .resume_variants import ResumeVariant, choose_resume
 from .store import content_hash, digest
+
+
+def bind_preparation_to_form(plan: dict, inspection: dict, fields: dict, cv_id: str) -> dict:
+    """Bind reviewed CV bytes to one observed resume field for preview only."""
+    if plan.get("state") not in {"preview", "prepared"} or plan.get("can_submit") is not False:
+        raise ValueError("a non-submitting preparation plan is required")
+    if not isinstance(plan.get("bundle_id"), str) or not plan["bundle_id"]:
+        raise ValueError("preparation plan needs its bundle identity")
+    posting = Job("", "", "", "", apply_url=plan.get("posting_url", ""))
+    form = Job("", "", "", "", apply_url=inspection.get("url", ""))
+    if not duplicate_match(posting, form).duplicate:
+        raise ValueError("preparation posting and inspected employer form are not the same verified job")
+    cv = plan.get("cv", {})
+    if cv.get("id") != cv_id or cv.get("modified") is not False:
+        raise ValueError("selected CV differs from the reviewed preparation plan")
+    verify_cv({"path": cv["path"], "reviewed_sha256": cv["sha256"]})
+    uploads = [c for c in inspection["controls"] if c["kind"] == "file"]
+    if len(uploads) != 1 or not re.search(r"\b(?:cv|resume|résumé|curriculum vitae)\b", uploads[0]["label"], re.I):
+        raise ValueError("exactly one explicitly labeled resume upload is required")
+    label = uploads[0]["label"]
+    result = dict(fields)
+    if result.get(label) and Path(result[label]).resolve() != Path(cv["path"]).resolve():
+        raise ValueError("form profile supplies a different CV from the preparation plan")
+    result[label] = cv["path"]
+    return result
 
 
 def verify_cv(item: dict):

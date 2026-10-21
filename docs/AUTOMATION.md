@@ -113,6 +113,17 @@ names or IDs consistently. ID mode requests ID-keyed records; name mode requests
 name-keyed records. API failures do not become an empty history. No tracker
 records are created or updated by automatic selection.
 
+If an existing application ledger is used, pass its exact path with
+`--application-ledger PRIVATE_LEDGER`. It is read in SQLite read-only mode before
+scanning. Missing, corrupt or unknown-state ledgers stop the run rather than
+pretending there is no prior application. Submitted/synced entries suppress
+selection; unresolved claims route to review before any model dispatch.
+Both posting URLs and scoped ATS identities are checked, including Ashby's
+posting/application URL variants. The fence also applies to preview material
+plans and cached matches. An empty local ledger does not establish that external
+history is empty. This per-run snapshot cannot replace the atomic claim/check
+immediately before any future submit driver; it does not implement that driver.
+
 ```text
 python -m job_agent.run_cli --settings data/search_settings.example.json --profile private/automation_profile.json
 ```
@@ -200,6 +211,14 @@ node browser/ashby_cli.cjs preview URL private/manifest.json private/readback.js
 
 Use `--audit-only` only when intentionally filling headlessly and closing after
 the audit. No preview path clicks submit or records an application receipt.
+
+`scripts.plan_ashby --preparation-plan PRIVATE_PLAN` can bind a material plan
+to an inspected form. It requires the same posting/ATS identity, the same CV
+variant and unchanged reviewed PDF bytes. Only one explicitly labeled CV/resume
+upload is auto-populated; ambiguous or cover-letter uploads stop the handoff.
+The standard fields still require a confirmed private form profile. Preparation
+unresolved items are retained separately in the manifest; filling a preview
+does not clear history/liveness issues or grant permission to submit.
 
 ## Remaining integration, in order
 

@@ -11,6 +11,19 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class RunCliTests(unittest.TestCase):
+    def test_missing_ledger_stops_before_scan_or_database_creation(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "profile.json").write_text(json.dumps(profile()), encoding="utf-8")
+            command = [sys.executable, "-m", "job_agent.run_cli", "--settings", "data/search_settings.example.json",
+                       "--profile", str(root / "profile.json"), "--db", str(root / "jobs.sqlite"),
+                       "--application-ledger", str(root / "missing.sqlite")]
+            result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("ledger does not exist", result.stderr)
+            self.assertFalse((root / "jobs.sqlite").exists())
+            self.assertFalse((root / "missing.sqlite").exists())
+
     def test_offline_run_is_incremental_and_never_invents_history(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
