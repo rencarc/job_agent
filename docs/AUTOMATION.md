@@ -230,6 +230,29 @@ does not clear history/liveness issues or grant permission to submit.
 
 ## Remaining integration, in order
 
+### Teamtailor read-only form inspection
+
+`node browser/teamtailor_cli.cjs HTTPS_APPLICATION_URL PRIVATE_OUTPUT` reads
+the observed application form without filling, uploading or clicking. Set
+`JOB_AGENT_BROWSER_EXECUTABLE` to an installed Chrome executable if required;
+the script uses the existing Playwright dependency. It recognizes mandatory
+container flags, label asterisks and screen-reader required markers even when
+the input lacks an HTML required attribute. Radio choices retain their parent
+question instead of becoming ambiguous separate Yes/No fields. Hidden tokens
+and input values are not exported. Unknown controls and redirects stop inspection.
+
+`python -m scripts.plan_teamtailor --inspection PRIVATE_INSPECTION --preferences PRIVATE_PREFERENCES --output PRIVATE_PLAN`
+creates suggestions from explicitly confirmed immediate availability and gross
+monthly SEK salary, leaving other required answers unresolved. Immediate
+availability uses the current Stockholm date; preferences older than 30 days
+need reconfirmation. Salary units still need verification against the employer
+field; annual/hourly/net/other-currency labels never receive the monthly value.
+This is a preparation checklist, not a filling manifest or a submit driver.
+
+Local DOM regression tests use installed Chrome and Playwright without network
+access. They skip when that browser environment is absent, including bare CI.
+Run them with `JOB_AGENT_BROWSER_EXECUTABLE` configured to exercise the DOM cases.
+
 1. Confirm the real profile and field mapping; inspect one live read-only run.
 2. Label representative jobs and calibrate the selection baseline. Add a bounded
    semantic evaluator only where measured improvements justify its token cost.

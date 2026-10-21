@@ -21,6 +21,7 @@ class ApplicationRouteTests(unittest.TestCase):
     def test_teamtailor_custom_domain_does_not_reuse_ashby_adapter(self):
         route = self.route("https://career.example.test/jobs/1234567-ai-developer/applications/new")
         self.assertEqual(route["status"], "unsupported_provider")
+        self.assertTrue(route["inspection_supported"])
         self.assertFalse(route["preview_supported"])
 
     def test_homepage_and_source_listing_are_not_direct_forms(self):

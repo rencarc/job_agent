@@ -8,7 +8,7 @@ from .models import Job
 def application_route(job: Job) -> dict:
     url = job.apply_url or job.source_url
     result = {"preview_supported": False, "can_submit": False, "url": url,
-              "provider": "unknown", "posting_open": "unverified"}
+              "provider": "unknown", "posting_open": "unverified", "inspection_supported": False}
     try:
         parts = urlsplit(url)
         host = (parts.hostname or "").casefold()
@@ -30,8 +30,8 @@ def application_route(job: Job) -> dict:
             return {**result, "status": "unsupported_provider", "provider": provider,
                     "reason": provider + " form driver is not implemented"}
     if host.endswith(".teamtailor.com") or re.fullmatch(r"/jobs/\d+-[^/]+/applications/new", path):
-        return {**result, "status": "unsupported_provider", "provider": "teamtailor_hint",
-                "reason": "Teamtailor-style endpoint needs a separate inspected adapter"}
+        return {**result, "status": "unsupported_provider", "provider": "teamtailor_hint", "inspection_supported": True,
+                "reason": "Teamtailor read-only inspection available; filling/submission driver is not implemented"}
     if not path or host in {"arbetsformedlingen.se", "www.arbetsformedlingen.se"}:
         return {**result, "status": "no_direct_form",
                 "reason": "company homepage or source listing is not a verified direct application form"}
