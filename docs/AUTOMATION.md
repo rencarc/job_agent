@@ -249,6 +249,20 @@ need reconfirmation. Salary units still need verification against the employer
 field; annual/hourly/net/other-currency labels never receive the monthly value.
 This is a preparation checklist, not a filling manifest or a submit driver.
 
+Optional `--contacts PRIVATE_CONTACTS` attaches only exact standard contact
+fields and a source-backed city. Contacts require a reviewed PDF path/hash,
+an explicit confirmation status and international phone format; a changed
+source stops preparation. Draft contacts remain marked as drafts and all
+values stay suggestions. Labels and control types must agree with the standard
+field identities; no name splitting or country code guessing runs automatically.
+
+The optional combination `--candidate-profile PRIVATE_PROFILE --resume-catalog PRIVATE_CATALOG --cv-id ID`
+attaches one reviewed CV to an explicitly labeled CV upload and retains its
+supporting career facts in the local checklist. Other-document uploads remain
+empty; multiple possible CV upload targets stop the handoff. These attachments
+do not answer qualification questions, clear unknown requirements or upload a
+file. Private contacts and generated checklists must stay under ignored storage.
+
 Local DOM regression tests use installed Chrome and Playwright without network
 access. They skip when that browser environment is absent, including bare CI.
 Run them with `JOB_AGENT_BROWSER_EXECUTABLE` configured to exercise the DOM cases.
