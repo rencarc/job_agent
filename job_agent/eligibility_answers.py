@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -16,6 +17,8 @@ class EligibilityAnswers:
     work_authorized_now: bool
     employer_support_required: bool
     confirmed_on: date
+    employer_support_required_now: bool | None = None
+    employer_support_required_future: bool | None = None
 
 
 def load_eligibility(path: Path) -> EligibilityAnswers:
@@ -27,8 +30,37 @@ def load_eligibility(path: Path) -> EligibilityAnswers:
     confirmed = date.fromisoformat(data["confirmed_on"])
     if confirmed > date.today():
         raise ValueError("confirmation date cannot be in the future")
+    for key in ("employer_support_required_now", "employer_support_required_future"):
+        if data.get(key) is not None and type(data[key]) is not bool:
+            raise ValueError("scoped employer support answers must be booleans or unknown")
+    scoped = [data.get("employer_support_required_now"), data.get("employer_support_required_future")]
+    if any(value is True for value in scoped) and not data["employer_support_required"]:
+        raise ValueError("combined employer support answer contradicts scoped answers")
+    if scoped == [False, False] and data["employer_support_required"]:
+        raise ValueError("combined employer support answer contradicts scoped answers")
     return EligibilityAnswers("SE", data["work_authorized_now"],
-                              data["employer_support_required"], confirmed)
+                              data["employer_support_required"], confirmed, *scoped)
+
+
+def employer_support_answer(question: str, answers: EligibilityAnswers) -> bool:
+    now = bool(re.search(r"\bcurrently\b|\bnow\b|at present|för närvarande|\bidag\b|\bnu\b", question, re.I))
+    future = bool(re.search(r"future|framtid|framöver|senare", question, re.I))
+    current_answer = answers.employer_support_required_now
+    future_answer = answers.employer_support_required_future
+    if now and future:
+        if current_answer is True or future_answer is True:
+            return True
+        if current_answer is False and future_answer is False:
+            return False
+        if current_answer is None and future_answer is None:
+            return answers.employer_support_required  # legacy combined confirmation
+    elif now and current_answer is not None:
+        return current_answer
+    elif future and future_answer is not None:
+        return future_answer
+    elif not now and not future and current_answer is None and future_answer is None:
+        return answers.employer_support_required  # legacy unsplit confirmation
+    raise ValueError("employer support timeframe needs a separately confirmed answer")
 
 
 def eligibility_field(question: str, answer_kind: str, *, job_country: str,
@@ -41,9 +73,11 @@ def eligibility_field(question: str, answer_kind: str, *, job_country: str,
     if language not in {"en", "sv"}:
         raise ValueError("question language needs review")
     if answer_kind == "work_authorization":
+        if re.search(r"future|permanent|unrestricted|without sponsorship|citizen|framtid|permanent|medborg", question, re.I):
+            raise ValueError("current work authorization does not establish permanent or future eligibility")
         response = answers.work_authorized_now
     elif answer_kind == "employer_support":
-        response = answers.employer_support_required
+        response = employer_support_answer(question, answers)
     else:
         raise ValueError("unknown eligibility question")
     value = ("Yes" if response else "No") if language == "en" else ("Ja" if response else "Nej")

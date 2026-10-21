@@ -20,11 +20,78 @@ model or a probability of success. Language levels and work-eligibility clauses
 still become exceptions. It does not infer work authorization from a language or
 country preference.
 
+### Draft-profile preview and location preferences
+
+`--preview` accepts a structurally valid, unconfirmed profile for read-only
+evaluation. It skips Airtable reads, never invokes a model, and exports only
+`preview` tasks with separate `suggested_decision` and `routing_decision` fields.
+It requires an explicitly separate database; databases are bound to preview or
+production mode so a draft cannot overwrite the production queue. Suggestions
+are ranked by decision, preferred location and rule priority. Other Swedish
+cities remain candidates: `preferred_locations` changes ordering, not eligibility.
+An explicit city in a staffing-ad title takes ranking precedence over an agency's
+structured location. This is a heuristic, not verified workplace geocoding.
+
+Optional `language_levels` distinguishes known fluent English from intermediate
+Swedish; missing levels are not invented. The rule parser separates required,
+preferred/negated and merely mentioned languages, retains quotes, and flags gaps.
+It is not a complete natural-language parser. `technical_seniority: early_career`
+flags senior technical titles and explicit multi-year technical requirements for
+review instead of treating business-operations tenure as engineering experience.
+`skill_aliases` can match spellings such as PowerApps without counting aliases as
+multiple separate skills. Scores are rule priorities, not match probabilities.
+
+Explicit required technology sections retain unsupported-skill quotes for
+review; the parser does not turn a missing CV mention into a claim of inability.
+Numeric and common written year counts, production ownership wording and senior
+roles stated inside a description are also review signals for an early-career
+profile. These checks remain heuristic and need independent evaluation labels.
+
+JobTech publication deadlines and removal status are retained. Deadline/removal
+checks run again even when matching is cached; an elapsed structured deadline
+suppresses preparation. Conflicting body/structured deadlines become exceptions,
+because a repost may retain stale text. This is not an employer-site liveness
+check. Local deadline dates use Europe/Stockholm; Windows installs the small
+`tzdata` runtime dependency for IANA timezone support.
+
+Keep the real profile/CV under ignored private storage. If `source_document` and
+`source_sha256` are present, both are required and the source hash is checked
+before a run; a changed CV requires re-reviewing its derived facts. Never publish
+real candidate facts as test fixtures. A preview can validate data flow and find
+regressions, but it cannot establish precision/recall without independent labels.
+
+```text
+python -m job_agent.run_cli --settings PRIVATE_SETTINGS --profile PRIVATE_DRAFT --preview --db private/preview.sqlite --max-requests 12
+```
+
 The CLI has no model provider and cannot spend model credits. `run_pipeline`
 exposes an optional evaluator interface for later provider integration; that
 interface can annotate priority only, never clear eligibility exceptions or
 enable submission. A future adapter must enforce the provided token maximum at
 the provider boundary and a request timeout. No such adapter is enabled here.
+
+### Preparation plans and scoped eligibility answers
+
+`--resume-catalog PRIVATE_CATALOG` reuses an existing reviewed PDF and writes a
+local preparation plan for each `prepare` candidate (or suggested candidate in
+preview). Start from `data/preparation_catalog.example.json`. A catalog records
+CV paths, reviewed SHA-256 hashes, focus terms and supporting fact IDs. The CV is
+checked before scanning and again when planning; the plan never modifies the
+PDF or invents an experience claim. Plans retain unresolved fields, do not
+generate a cover letter by default, and cannot submit. Replays reuse the same
+plan identity and refuse to overwrite conflicting user edits.
+
+The catalog's PDF header/hash checks establish identity with a previously
+reviewed file, not a complete PDF validity/layout check. Human document review
+and downstream form readback remain required parts of integration.
+
+Eligibility distinguishes current work authorization, employer support now,
+and employer support in the future. A known future support requirement permits
+`Yes` to a now-or-future sponsorship question, but does not invent an answer to
+a current-only question or imply permanent/unrestricted work authorization.
+Optional `employer_support_required_now` and `employer_support_required_future`
+fields can remain null. Unknown timeframe questions pause for review. Older
+combined profiles remain supported for their original unsplit question scope.
 
 ## Configure once
 
@@ -139,8 +206,9 @@ the audit. No preview path clicks submit or records an application receipt.
 1. Confirm the real profile and field mapping; inspect one live read-only run.
 2. Label representative jobs and calibrate the selection baseline. Add a bounded
    semantic evaluator only where measured improvements justify its token cost.
-3. Verify posting liveness, choose the actual CV, reuse approved answers, compile
-   and inspect materials, then connect preparation tasks to browser manifests.
+3. Verify posting liveness and connect reviewed-CV preparation plans and approved
+   scoped answers to browser manifests. Add tailoring only when useful; new PDFs
+   must be compiled and inspected before use.
 4. Add independently verified receipt capture and unknown-submission recovery;
    connect the existing ledger/outbox to one tested ATS.
 5. Configure the approved ATS/role/daily submission limits before enabling any

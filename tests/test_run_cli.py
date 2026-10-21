@@ -45,3 +45,20 @@ class RunCliTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("user-confirmed", result.stderr)
             self.assertFalse((root / "jobs.sqlite").exists())
+
+    def test_preview_flag_accepts_draft_without_turning_it_into_real_tasks(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "profile.json").write_text(json.dumps({**profile(), "confirmed_by_user": False}))
+            (root / "jobs.json").write_text(json.dumps({"jobs": [{"external_id": "1", "company": "Example",
+                "title": "AI Engineer", "description": "Python API", "source": "fixture",
+                "location_status": "sweden", "source_url": "https://example.test/1"}]}))
+            command = [sys.executable, "-m", "job_agent.run_cli", "--settings", "data/search_settings.example.json",
+                       "--profile", str(root / "profile.json"), "--offline-jobs", str(root / "jobs.json"),
+                       "--preview", "--db", str(root / "preview.sqlite"), "--output-dir", str(root / "out")]
+            result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            report = json.loads((root / "out/latest.json").read_text())
+            self.assertFalse(report["profile_confirmed"])
+            self.assertEqual(report["counts"], {"preview": 1})
+            self.assertFalse(report["tasks"][0]["can_submit"])

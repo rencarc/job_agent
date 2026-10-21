@@ -21,7 +21,8 @@ def digest(value) -> str:
 def content_hash(job: Job) -> str:
     # Discovery timestamps/transport URLs do not trigger repeated evaluations.
     return digest({key: getattr(job, key) for key in
-                   ("company", "title", "location", "description", "location_status", "published_at", "updated_at")})
+                   ("company", "title", "location", "description", "location_status", "published_at", "updated_at",
+                    "application_deadline", "removed")})
 
 
 def identities(job: Job) -> list[str]:
@@ -71,6 +72,7 @@ class JobStore:
             CREATE TABLE IF NOT EXISTS scan_batches (
                 config_hash TEXT PRIMARY KEY, id TEXT NOT NULL, cutoff TEXT NOT NULL,
                 started_at REAL NOT NULL, complete INTEGER NOT NULL);
+            CREATE TABLE IF NOT EXISTS workspace_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
         """)
         self.db.commit()
 
@@ -79,6 +81,13 @@ class JobStore:
 
     def __exit__(self, *args):
         self.db.close()
+
+    def bind_mode(self, mode: str):
+        with self.db:
+            self.db.execute("INSERT OR IGNORE INTO workspace_settings VALUES ('mode',?)", (mode,))
+            actual = self.db.execute("SELECT value FROM workspace_settings WHERE key='mode'").fetchone()[0]
+            if actual != mode:
+                raise ValueError("preview and production require separate databases")
 
     @contextmanager
     def lease(self, name: str, *, seconds: float):

@@ -1,9 +1,11 @@
 import tempfile
+import json
+import hashlib
 import unittest
 from dataclasses import replace
 from pathlib import Path
 
-from job_agent.automation import Limits, run_pipeline, validate_profile
+from job_agent.automation import Limits, load_profile, run_pipeline, validate_profile
 from job_agent.config import AIRTABLE_FIELDS
 from job_agent.models import Job
 from job_agent.store import JobStore
@@ -52,6 +54,15 @@ class AutomationTests(unittest.TestCase):
             self.assertEqual(result["evaluated"], 1)
             self.assertEqual(result["counts"], {"exception": 1})
 
+    def test_preferred_city_changes_order_without_excluding_other_sweden(self):
+        preferences = profile()
+        preferences["preferred_locations"] = ["Stockholm"]
+        with JobStore(self.path) as store:
+            result = run_pipeline(store, [replace(job(1), location="Gothenburg"), job(2)],
+                                  preferences, history_records=[])
+            self.assertEqual(result["counts"], {"prepare": 2})
+            self.assertEqual([task["location_priority"] for task in result["tasks"]], [0, 1])
+
     def test_history_is_rechecked_even_when_match_cached(self):
         with JobStore(self.path) as store:
             run_pipeline(store, [job()], profile(), history_records=[])
@@ -66,6 +77,40 @@ class AutomationTests(unittest.TestCase):
             result = run_pipeline(store, [job()], profile())
             self.assertEqual(result["counts"], {"exception": 1})
             self.assertEqual(run_pipeline(store, [], profile(), history_records=[])["counts"], {"prepare": 1})
+
+    def test_draft_preview_is_isolated_and_cannot_become_actionable(self):
+        draft = {**profile(), "confirmed_by_user": False}
+        with JobStore(self.path) as store:
+            result = run_pipeline(store, [job()], draft, preview=True)
+            self.assertEqual(result["counts"], {"preview": 1})
+            self.assertEqual(result["tasks"][0]["suggested_decision"], "prepare")
+            self.assertEqual(result["tasks"][0]["routing_decision"], "exception")
+            self.assertFalse(result["tasks"][0]["can_submit"])
+            with self.assertRaises(ValueError):
+                run_pipeline(store, [], profile(), history_records=[])
+
+    def test_preview_sorts_suggested_prepare_ahead_of_high_scoring_exceptions(self):
+        draft = {**profile(), "confirmed_by_user": False, "technical_seniority": "early_career"}
+        with JobStore(self.path) as store:
+            result = run_pipeline(store, [replace(job(1), title="Senior AI Engineer"), job(2)], draft, preview=True)
+            self.assertEqual([t["suggested_decision"] for t in result["tasks"]], ["prepare", "exception"])
+
+    def test_title_city_beats_staffing_agency_location_for_priority_only(self):
+        preferences = {**profile(), "preferred_locations": ["Stockholm"]}
+        with JobStore(self.path) as store:
+            result = run_pipeline(store, [replace(job(1), title="AI Engineer - Gothenburg"), job(2)], preferences, history_records=[])
+            self.assertEqual(result["counts"], {"prepare": 2})
+            self.assertEqual([t["location_priority"] for t in result["tasks"]], [0, 1])
+
+    def test_preview_retains_real_mismatch_reasons_and_does_not_call_models(self):
+        draft = {**profile(), "confirmed_by_user": False}
+        with JobStore(self.path) as store:
+            result = run_pipeline(store, [replace(job(), description="Python API. Finnish required.")], draft, preview=True)
+            reasons = result["tasks"][0]["reasons"]
+            self.assertTrue(any("language" in reason for reason in reasons))
+            self.assertIn("application history is unverified", reasons)
+            with self.assertRaises(ValueError):
+                run_pipeline(store, [], draft, preview=True, evaluator=lambda *a, **k: {}, evaluator_version="test")
 
     def test_bounded_runs_resume_backlog_without_new_discovery(self):
         jobs = [job(i) for i in range(1000)]
@@ -109,6 +154,18 @@ class AutomationTests(unittest.TestCase):
             validate_profile(bad)
         with self.assertRaises(ValueError):
             Limits(max_evaluations=-1)
+
+    def test_source_hash_change_invalidates_extracted_profile(self):
+        source = Path(self.tmp.name) / "cv.pdf"
+        source.write_bytes(b"sample CV bytes")
+        value = {**profile(), "source_document": str(source),
+                 "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest()}
+        path = Path(self.tmp.name) / "profile.json"
+        path.write_text(json.dumps(value))
+        self.assertEqual(load_profile(path), value)
+        source.write_bytes(b"updated CV bytes")
+        with self.assertRaisesRegex(ValueError, "CV changed"):
+            load_profile(path)
 
     def test_model_allowance_persists_across_restarts(self):
         limits = Limits(daily_model_calls=1, daily_tokens=500, tokens_per_call=500)

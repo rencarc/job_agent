@@ -51,6 +51,8 @@ def normalize_hit(hit: dict[str, Any], *, discovered_at: str | None = None) -> J
         published_at=str(hit.get("publication_date") or ""),
         discovered_at=discovered_at or datetime.now(timezone.utc).isoformat(),
         location_status="sweden",
+        application_deadline=str(hit.get("application_deadline") or ""),
+        removed=hit.get("removed") is True,
     )
 
 

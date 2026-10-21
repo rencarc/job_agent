@@ -20,6 +20,11 @@ use names or field IDs consistently; a mixed core mapping is rejected.
 This release queues preparation tasks; it does not generate tailored documents,
 enable a model provider, install a schedule, send notifications, or submit forms.
 
+For read-only draft-profile validation, add `--preview` and an explicitly separate
+`--db private/preview.sqlite`. Optional `--resume-catalog PRIVATE_CATALOG` creates
+local preparation plans referencing reviewed CV bytes and supported facts. It
+does not rewrite the CV, generate a cover letter by default, or submit anything.
+
 An evidence-first job discovery, scoring, and application-audit toolkit.
 
 The project focuses on low-risk automation:
