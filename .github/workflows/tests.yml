@@ -1,5 +1,11 @@
 name: Offline regression tests
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+  pull_request:
+concurrency:
+  group: offline-tests-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
 jobs:
   test:
     strategy:

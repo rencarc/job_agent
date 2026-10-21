@@ -85,6 +85,14 @@ The catalog's PDF header/hash checks establish identity with a previously
 reviewed file, not a complete PDF validity/layout check. Human document review
 and downstream form readback remain required parts of integration.
 
+Each CLI task and preparation plan includes an `application_route`. This
+zero-request classifier distinguishes the supported Ashby preview route from
+other providers, unknown forms, company homepages and insecure endpoints.
+Teamtailor-style custom-domain paths are marked as hints requiring their own
+adapter; they never reuse the Ashby driver. Route support does not establish
+posting openness or permission to submit. Mandatory CI/CD and version-control
+requirements also retain unsupported-profile evidence for review.
+
 Eligibility distinguishes current work authorization, employer support now,
 and employer support in the future. A known future support requirement permits
 `Yes` to a now-or-future sponsorship question, but does not invent an answer to

@@ -8,6 +8,7 @@ from pathlib import Path
 
 from .models import Job
 from .dedup import duplicate_match
+from .application_route import application_route
 from .resume_variants import ResumeVariant, choose_resume
 from .store import content_hash, digest
 
@@ -94,12 +95,15 @@ def prepare_materials(report: dict, profile: dict, catalog: list[dict], output_d
         elif task["decision"] != "prepare":
             continue
         job = Job(**task["job"])
+        route = application_route(job)
         choice = choose_resume(job, variants)
         selected = by_id[choice.variant.variant_id]
         verify_cv(selected)
         fact_ids = {fact for hit in task.get("evidence", []) for fact in hit["fact_ids"]}
         supported = sorted(fact_ids & set(selected["fact_ids"]))
         unresolved = [*task.get("reasons", []), "employer form has not been inspected", "employer posting openness has not been verified"]
+        if not route["preview_supported"]:
+            unresolved.append(route["reason"])
         if choice.confidence != "supported":
             unresolved.append("CV variant selection needs review")
         if not supported:
@@ -112,10 +116,10 @@ def prepare_materials(report: dict, profile: dict, catalog: list[dict], output_d
             unresolved.append("current-only employer support answer is unknown")
         if profile.get("employer_support_required_future") is None:
             unresolved.append("future employer support answer is unknown")
-        bundle_id = digest(["preparation-v2", task["job_id"], content_hash(job), digest(profile), digest(selected), preview])
+        bundle_id = digest(["preparation-v3", task["job_id"], content_hash(job), digest(profile), digest(selected), digest(route), preview])
         plan = {"bundle_id": bundle_id, "job_id": task["job_id"], "company": job.company, "title": job.title,
                 "posting_url": job.apply_url or job.source_url, "state": "preview" if preview else "prepared",
-                "can_submit": False, "cv": {"id": selected["id"], "path": selected["path"],
+                "can_submit": False, "application_route": route, "cv": {"id": selected["id"], "path": selected["path"],
                     "sha256": selected["reviewed_sha256"], "modified": False, "matched_terms": list(choice.matched_terms)},
                 "supported_facts": {fact: profile["facts"][fact] for fact in supported},
                 "work_authorized_now": profile.get("work_authorized_now"),

@@ -17,6 +17,7 @@ from .http_read import JsonReader
 from .models import Job
 from .materials import load_catalog, prepare_materials
 from .local_history import LocalApplicationHistory
+from .application_route import application_route
 from .search_settings import load_search_settings
 from .sources.ats import PublicBoardSource
 from .sources.jobtech import JobTechSource
@@ -124,7 +125,9 @@ def main():
                 report["profile_confirmed"] = profile["confirmed_by_user"]
                 # Join the queue to original posting data for a usable handoff.
                 job_map = {key: asdict(job) for key, job in store.jobs()}
-                report["tasks"] = [{**task, "job": job_map[task["job_id"]]} for task in report["tasks"]]
+                report["tasks"] = [{**task, "job": job_map[task["job_id"]],
+                                    "application_route": application_route(Job(**job_map[task["job_id"]]))}
+                                   for task in report["tasks"]]
                 if catalog is not None:
                     report["materials"] = prepare_materials(report, profile, catalog,
                                                            args.output_dir / "materials", preview=args.preview)

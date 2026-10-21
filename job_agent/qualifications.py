@@ -15,6 +15,8 @@ TECHNOLOGIES = {
     "React": r"\breact\b", "Blazor": r"\bblazor\b", "Node.js": r"\bnode\.?js\b",
     "SQL Server": r"\bsql server\b|\bazure sql\b", "PowerShell": r"\bpowershell\b",
     "Kubernetes": r"\bkubernetes\b", "FastAPI": r"\bfastapi\b",
+    "CI/CD": r"\bci\s*/\s*cd\b|\bci[- ]cd\b|continuous integration|continuous delivery|continuous deployment",
+    "version control": r"version control|versionshantering|\bgit\b",
 }
 
 

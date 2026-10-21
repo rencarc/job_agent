@@ -4,6 +4,22 @@ from test_automation import profile
 
 
 class QualificationTests(unittest.TestCase):
+    def test_required_delivery_and_version_control_are_not_ignored(self):
+        text = "Din profil (Skall krav)\nErfarenhet av CI/CD-processer och versionshantering."
+        evidence = required_skill_gaps(text, profile())
+        self.assertEqual({item["skill"] for item in evidence}, {"CI/CD", "version control"})
+        self.assertTrue(all("CI/CD" in item["quote"] for item in evidence))
+
+    def test_verified_git_and_cicd_aliases_satisfy_delivery_requirements(self):
+        candidate = profile()
+        candidate["skills"]["Git"] = ["project"]
+        candidate["skills"]["delivery"] = ["project"]
+        candidate["skill_aliases"] = {"delivery": ["continuous integration"]}
+        self.assertEqual(required_skill_gaps("Requirements:\nCI/CD and version control.", candidate), [])
+
+    def test_optional_delivery_tools_do_not_become_required(self):
+        self.assertEqual(required_skill_gaps("Requirements:\nPython.\nCI/CD is nice to have.", profile()), [])
+
     def test_swedish_words_and_parenthesized_years(self):
         for phrase in ("Minst fem års erfarenhet som AI Developer.",
                        "Flera (5+) års erfarenhet av Microsoft 365.",

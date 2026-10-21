@@ -46,6 +46,8 @@ class RunCliTests(unittest.TestCase):
             self.assertEqual(latest["usage_today"], {"calls": 0, "tokens": 0})
             self.assertEqual(latest["counts"], {"exception": 1})
             self.assertIn("job", latest["tasks"][0])
+            self.assertEqual(latest["tasks"][0]["application_route"]["posting_open"], "unverified")
+            self.assertFalse(latest["tasks"][0]["application_route"]["can_submit"])
             self.assertFalse(latest["tasks"][0]["can_submit"])
 
     def test_unconfirmed_profile_fails_before_database_or_network(self):
