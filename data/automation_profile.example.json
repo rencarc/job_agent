@@ -1,0 +1,14 @@
+{
+  "confirmed_by_user": false,
+  "country_code": "SE",
+  "target_titles": ["AI engineer", "automation specialist", "Power Platform developer"],
+  "languages": ["en"],
+  "min_skill_matches": 2,
+  "facts": {
+    "replace_with_verified_project": "Replace this example with your verified project description."
+  },
+  "skills": {
+    "Python": ["replace_with_verified_project"],
+    "API": ["replace_with_verified_project"]
+  }
+}

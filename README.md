@@ -1,5 +1,30 @@
 # Auditable Job Agent
 
+## Incremental automatic selection
+
+The new bounded runner saves jobs and JD versions in SQLite, reuses unchanged
+evaluations, checks tracker history on every run, and automatically creates
+preparation tasks or exceptions. Discovery, caching and profile-rule matching
+use **zero LLM calls**. See [docs/AUTOMATION.md](docs/AUTOMATION.md) for setup,
+limits, recovery behavior, and what remains to be integrated.
+
+```bash
+python -m job_agent.run_cli --settings data/search_settings.example.json --profile private/automation_profile.json
+```
+
+Create the private profile from `data/automation_profile.example.json`, replace
+all sample facts, and confirm the actual profile before use. Live runs require
+`AIRTABLE_TOKEN`, `AIRTABLE_BASE_ID` and `AIRTABLE_TABLE_ID`. History fields may
+use names or field IDs consistently; a mixed core mapping is rejected.
+
+This release queues preparation tasks; it does not generate tailored documents,
+enable a model provider, install a schedule, send notifications, or submit forms.
+
+For read-only draft-profile validation, add `--preview` and an explicitly separate
+`--db private/preview.sqlite`. Optional `--resume-catalog PRIVATE_CATALOG` creates
+local preparation plans referencing reviewed CV bytes and supported facts. It
+does not rewrite the CV, generate a cover letter by default, or submit anything.
+
 An evidence-first job discovery, scoring, and application-audit toolkit.
 
 The project focuses on low-risk automation:
@@ -73,6 +98,11 @@ npm install
 npx playwright install chromium
 node browser/ashby_cli.cjs inspect URL private/inspection.json
 ```
+
+After building a manifest, `preview URL manifest.json output.json` now opens a
+visible browser and keeps it open until you close it. `--audit-only` retains the
+headless, close-after-readback behavior for explicit audit runs. A preview audit
+does not prove that a submission occurred and never updates Applied status.
 
 The default output paths point to `private/`, which is ignored by git.
 

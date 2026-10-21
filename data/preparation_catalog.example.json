@@ -1,0 +1,13 @@
+{
+  "confirmed_by_user": false,
+  "variants": [
+    {
+      "id": "base_cv",
+      "path": "private/resume.pdf",
+      "reviewed_sha256": "replace_with_the_sha256_of_the_reviewed_pdf",
+      "language": "en",
+      "focus_terms": ["Python", "API"],
+      "fact_ids": ["replace_with_verified_project"]
+    }
+  ]
+}

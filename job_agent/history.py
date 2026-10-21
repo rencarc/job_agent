@@ -56,3 +56,23 @@ def match_history(job: Job, records: Iterable[dict]) -> HistoryMatch:
             reason = "different URL for similar company and role" if same_role and existing_url and not same_url else "similar existing Airtable record"
             review = HistoryMatch("review", f"{reason} ({status or 'unknown status'})", record_id)
     return review or HistoryMatch("new", "no matching Airtable record")
+
+
+class HistoryIndex:
+    """Restrict matching to the same URL/company instead of scanning all history per job."""
+    def __init__(self, records: Iterable[dict]):
+        self.records = list(records)
+        self.by_url: dict[str, set[int]] = {}
+        self.by_company: dict[str, set[int]] = {}
+        for index, record in enumerate(self.records):
+            fields = record.get("cellValuesByFieldId", record.get("fields", record))
+            url = canonical_url(_value(fields, "job_link"))
+            company = _norm(_value(fields, "company"))
+            if url:
+                self.by_url.setdefault(url, set()).add(index)
+            if company:
+                self.by_company.setdefault(company, set()).add(index)
+
+    def match(self, job: Job) -> HistoryMatch:
+        candidates = self.by_url.get(canonical_url(job.apply_url or job.source_url), set()) | self.by_company.get(_norm(job.company), set())
+        return match_history(job, [self.records[index] for index in sorted(candidates)])

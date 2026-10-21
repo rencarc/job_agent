@@ -26,6 +26,9 @@ class Job:
     published_at: str = ""
     discovered_at: str = ""
     location_status: str = "unknown"  # sweden, outside_sweden, or unknown
+    updated_at: str = ""
+    application_deadline: str = ""
+    removed: bool = False
 
     @property
     def searchable_text(self) -> str:

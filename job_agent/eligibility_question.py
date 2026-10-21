@@ -6,7 +6,7 @@ def classify_eligibility_question(label: str) -> str | None:
     support = ("sponsorship" in text or "employer support" in text or
                "arbetsgivaren" in text and "arbetstillstånd" in text)
     authorization = ("work authorization" in text or "authorized to work" in text or
-                     "rätt att arbeta" in text)
+                     "right to work" in text or "rätt att arbeta" in text)
     if support and authorization:
         return None
     return "employer_support" if support else "work_authorization" if authorization else None

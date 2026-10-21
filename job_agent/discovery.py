@@ -6,7 +6,7 @@ from hashlib import sha256
 from pathlib import Path
 
 from .coverage import CoverageReport, QueryCoverage, SourceCoverage, utc_now
-from .dedup import ats_identity, canonical_url, fingerprint
+from .dedup import ats_identity, canonical_url, source_identity
 from .models import Job
 from .sources.base import JobSource
 
@@ -15,16 +15,16 @@ class DedupIndex:
     def __init__(self) -> None:
         self.ats_ids: set[tuple[str, str]] = set()
         self.urls: set[str] = set()
-        self.fingerprints: set[str] = set()
+        self.source_ids: set[tuple[str, str]] = set()
 
     def add_if_new(self, job: Job) -> bool:
         identity = ats_identity(job)
         url = canonical_url(job.apply_url or job.source_url)
-        key = fingerprint(job)
+        key = source_identity(job)
         duplicate = bool(
             (identity and identity in self.ats_ids)
             or (url and url in self.urls)
-            or (key and key in self.fingerprints)
+            or (key and key in self.source_ids)
         )
         if duplicate:
             return False
@@ -33,7 +33,7 @@ class DedupIndex:
         if url:
             self.urls.add(url)
         if key:
-            self.fingerprints.add(key)
+            self.source_ids.add(key)
         return True
 
 
@@ -52,15 +52,20 @@ def discover(source: JobSource, queries: list[str], *, limit_per_query: int = 10
             else:
                 duplicates += 1
         completed = utc_now()
+        states = {q.status for q in fetched.queries}
+        status = ("failed" if states == {"failed"} else "partial" if states & {"partial", "failed"}
+                  else "truncated" if "truncated" in states else "ok")
         source_report = SourceCoverage(
             source=source.name,
-            status="ok",
+            status=status,
             started_at=started,
             completed_at=completed,
-            queries=[QueryCoverage(q.query, len(q.jobs), q.total_available, q.pages_requested) for q in fetched.queries],
+            queries=[QueryCoverage(q.query, len(q.jobs), q.total_available, q.pages_requested,
+                                   q.status, q.error, q.date_unknown) for q in fetched.queries],
             fetched=len(fetched.jobs),
             unique=len(unique),
             duplicates=duplicates,
+            error="; ".join(q.error for q in fetched.queries if q.error) or None,
         )
     except Exception as exc:
         completed = utc_now()

@@ -12,7 +12,15 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--settings", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, default=Path("output/daily"))
+    parser.add_argument("--profile", type=Path, help="Enable durable automatic selection using a confirmed profile")
+    parser.add_argument("--db", type=Path, default=Path("private/job_agent.sqlite"))
     args = parser.parse_args()
+    if args.profile:
+        # Keep the legacy discovery-only invocation compatible; the new path
+        # scans, persists, matches, routes exceptions, and reuses cached results.
+        command = [sys.executable, "-m", "job_agent.run_cli", "--settings", str(args.settings),
+                   "--profile", str(args.profile), "--db", str(args.db), "--output-dir", str(args.output_dir)]
+        raise SystemExit(subprocess.run(command, check=False, timeout=600).returncode)
     if not os.environ.get("AIRTABLE_TOKEN"):
         parser.error("AIRTABLE_TOKEN is required: daily runs must check Airtable history")
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")

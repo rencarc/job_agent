@@ -12,6 +12,9 @@ class QueryResult:
     jobs: list[Job]
     total_available: int | None = None
     pages_requested: int = 1
+    status: str = "ok"  # ok, truncated, partial, failed
+    error: str | None = None
+    date_unknown: int = 0
 
 
 @dataclass(frozen=True)
