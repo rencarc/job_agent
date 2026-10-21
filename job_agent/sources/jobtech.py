@@ -50,6 +50,7 @@ def normalize_hit(hit: dict[str, Any], *, discovered_at: str | None = None) -> J
         apply_url=apply_url,
         published_at=str(hit.get("publication_date") or ""),
         discovered_at=discovered_at or datetime.now(timezone.utc).isoformat(),
+        location_status="sweden",
     )
 
 
@@ -86,21 +87,32 @@ class JobTechSource:
             jobs: list[Job] = []
             total = None
             pages = 0
+            error = None
+            complete = False
             for page in range(self.max_pages):
                 params: dict[str, str | int] = {"q": query, "limit": limit_per_query,
                                                 "offset": page * limit_per_query, "sort": "pubdate-desc"}
                 if published_after:
                     params["published-after"] = published_after
                 url = f"{self.base_url}/search?{urlencode(params)}"
-                payload = self._loader(url)
-                hits = payload.get("hits") or []
-                jobs.extend(normalize_hit(hit, discovered_at=discovered_at) for hit in hits)
+                try:
+                    payload = self._loader(url)
+                    hits = payload.get("hits") or []
+                    batch = [normalize_hit(hit, discovered_at=discovered_at) for hit in hits]
+                    raw_total = payload.get("total")
+                    total = raw_total.get("value") if isinstance(raw_total, dict) else raw_total
+                    total = int(total) if total is not None else None
+                except Exception as exc:
+                    error = f"{type(exc).__name__}: {exc}"
+                    break
+                jobs.extend(batch)
                 pages += 1
-                raw_total = payload.get("total")
-                total = raw_total.get("value") if isinstance(raw_total, dict) else raw_total
                 if len(hits) < limit_per_query or (total is not None and len(jobs) >= int(total)):
+                    complete = True
                     break
             results.append(QueryResult(query=query, jobs=jobs,
                                        total_available=int(total) if total is not None else None,
-                                       pages_requested=pages))
+                                       pages_requested=pages,
+                                       status=("partial" if jobs else "failed") if error else ("ok" if complete else "truncated"),
+                                       error=error, date_unknown=sum(not j.published_at for j in jobs)))
         return FetchResult(source=self.name, queries=results)

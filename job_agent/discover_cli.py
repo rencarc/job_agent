@@ -9,7 +9,7 @@ from pathlib import Path
 
 from .discovery import discover_many, write_jobs
 from .airtable_sync import AirtableClient
-from .history import match_history
+from .history import HistoryIndex
 from .sources.ats import PublicBoardSource
 from .sources.jobtech import JobTechSource
 from .triage import title_triage
@@ -93,7 +93,8 @@ def main() -> None:
                             if title_triage(job) == "candidate"]}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     if args.airtable_history:
         records = AirtableClient().history_records()
-        checks = [{"job_key": job.apply_url or job.source_url, **asdict(match_history(job, records))} for job in jobs]
+        history_index = HistoryIndex(records)
+        checks = [{"job_key": job.apply_url or job.source_url, **asdict(history_index.match(job))} for job in jobs]
         args.history_output.parent.mkdir(parents=True, exist_ok=True)
         args.history_output.write_text(json.dumps({"history_records": len(records), "checks": checks},
                                          ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

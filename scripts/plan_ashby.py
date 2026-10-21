@@ -2,6 +2,7 @@
 import argparse
 import hashlib
 import json
+from urllib.parse import urlsplit
 from dataclasses import asdict
 from pathlib import Path
 
@@ -21,7 +22,8 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     inspection = json.loads(args.inspection.read_text(encoding="utf-8"))
-    if not inspection.get("url", "").startswith("https://jobs.ashbyhq.com/"):
+    parsed = urlsplit(inspection.get("url", ""))
+    if parsed.scheme != "https" or parsed.hostname != "jobs.ashbyhq.com" or not parsed.path.endswith("/application"):
         parser.error("inspection needs an Ashby application URL")
     controls = [FormControl(item["label"], item["kind"], item["required"]) for item in inspection["controls"]]
     profile_data = json.loads(args.profile.read_text(encoding="utf-8"))
@@ -34,16 +36,19 @@ def main():
                        job_country=args.verified_country, eligibility_question_ids=mapping)
     if not result.ready:
         parser.error("cannot fill: " + "; ".join(result.unresolved))
-    if len(result.fields) != len(controls):
-        parser.error("every observed form control must have an audited answer")
-    for control, field in zip(controls, result.fields):
-        if control.label != field.label:
-            parser.error("form field order or labels changed")
+    if len({control.label for control in controls}) != len(controls):
+        parser.error("duplicate form labels need review")
+    by_label = {field.label: field for field in result.fields}
+    for control in controls:
+        field = by_label.get(control.label)
+        if field is None:
+            continue  # plan_form already rejected unanswered required controls.
         if control.kind == "file" and (not Path(field.value).is_file() or Path(field.value).suffix.lower() != ".pdf"):
             parser.error("resume must be an existing PDF")
-    resume = next((field for control, field in zip(controls, result.fields) if control.kind == "file"), None)
-    if resume is None:
-        parser.error("a resume upload is required for this first form driver")
+    uploads = [by_label[c.label] for c in controls if c.kind == "file" and c.label in by_label]
+    if len(uploads) != 1:
+        parser.error("exactly one resume upload is supported by this form driver")
+    resume = uploads[0]
     pdf_sha256 = hashlib.sha256(Path(resume.value).read_bytes()).hexdigest()
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps({"url": inspection["url"], "fields": [asdict(f) for f in result.fields],

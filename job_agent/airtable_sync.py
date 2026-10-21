@@ -19,6 +19,13 @@ class AirtableClient:
         if not self.token and transport is None:
             raise ValueError("AIRTABLE_TOKEN is required for local Airtable synchronization")
         self.transport = transport or self._request
+        keys = ("company", "role", "job_link", "status")
+        id_mode = [AIRTABLE_FIELDS[key].startswith("fld") for key in keys]
+        if any(id_mode) and not all(id_mode):
+            raise ValueError("Airtable history fields must all use names or all use field IDs")
+        self.by_field_id = all(id_mode)
+        if transport is None and (not AIRTABLE_BASE_ID or not AIRTABLE_TABLE_ID):
+            raise ValueError("AIRTABLE_BASE_ID and AIRTABLE_TABLE_ID are required")
         self.url = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{AIRTABLE_TABLE_ID}"
 
     def _request(self, method, url, payload=None):
@@ -40,13 +47,16 @@ class AirtableClient:
         result = []
         offset = None
         while True:
-            params = {"pageSize": 100, "returnFieldsByFieldId": "true"}
+            params = {"pageSize": 100, "returnFieldsByFieldId": str(self.by_field_id).lower()}
             if offset:
                 params["offset"] = offset
             page = self.transport("GET", f"{self.url}?{urlencode(params)}")
             for record in page.get("records", []):
+                fields = record.get("fields", {})
+                if fields and not fields.keys() & {AIRTABLE_FIELDS[k] for k in ("company", "role", "job_link", "status")}:
+                    raise ValueError("Airtable response does not match configured history field names/IDs")
                 result.append({"id": record["id"],
-                               "cellValuesByFieldId": record.get("fields", {})})
+                               "cellValuesByFieldId": fields})
             offset = page.get("offset")
             if not offset:
                 return result

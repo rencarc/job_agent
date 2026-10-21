@@ -12,6 +12,9 @@ class QueryCoverage:
     fetched: int
     total_available: int | None
     pages_requested: int = 1
+    status: str = "ok"
+    error: str | None = None
+    date_unknown: int = 0
 
 
 @dataclass

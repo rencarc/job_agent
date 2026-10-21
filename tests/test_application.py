@@ -65,7 +65,7 @@ class ApplicationTests(unittest.TestCase):
             self.assertEqual(client.sync_confirmed(ledger, [self.job]), 1)
             self.assertEqual(client.sync_confirmed(ledger, [self.job]), 0)
             self.assertEqual([call[0] for call in calls], ["GET", "POST"])
-            self.assertIn("returnFieldsByFieldId=true", calls[0][1])
+            self.assertIn("returnFieldsByFieldId=false", calls[0][1])
 
     def test_failed_airtable_write_keeps_receipt_pending(self):
         with tempfile.TemporaryDirectory() as tmp:

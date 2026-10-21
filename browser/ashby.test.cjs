@@ -2,6 +2,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { validateManifest } = require("./ashby.cjs");
+const { choiceValue } = require("./ashby.cjs");
 
 const controls = [
   { index: 0, label: "Name", kind: "text", required: true },
@@ -26,4 +27,15 @@ test("invalid yes-no choice and unresolved answers block", () => {
   assert.throws(() => validateManifest(controls, { fields: manifest.fields.map(f =>
     f.label === controls[2].label ? { ...f, value: "Maybe" } : f) }), /invalid answer/);
   assert.throws(() => validateManifest(controls, { ...manifest, unresolved: ["missing fact"] }), /unresolved/);
+});
+
+test("Swedish answers map to actual yes/no DOM values", () => {
+  assert.equal(choiceValue(controls[2], "Ja"), "yes");
+  assert.equal(choiceValue(controls[2], "Nej"), "no");
+  assert.equal(validateManifest(controls, { fields: manifest.fields.map(f =>
+    f.label === controls[2].label ? { ...f, value: "Ja" } : f) }), true);
+});
+
+test("textarea and omitted optional fields validate without fabricated answers", () => {
+  assert.equal(validateManifest([...controls, { label: "Optional note", kind: "textarea", required: false }], manifest), true);
 });

@@ -15,3 +15,6 @@ __pycache__/
 *.log
 chrome-profile-*/
 *profile*/
+build/
+dist/
+*.egg-info/

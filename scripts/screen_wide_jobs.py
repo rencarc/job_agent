@@ -3,7 +3,11 @@ from __future__ import annotations
 import csv
 import json
 import re
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from job_agent.requirements import requirement_evidence
 
 
 INPUT = Path("output/jobs_today_24h_wide.json")
@@ -57,15 +61,13 @@ def screen(job: dict) -> dict:
     title = job.get("title") or ""
     text = " ".join([
         title,
-        job.get("company") or "",
-        job.get("location") or "",
         job.get("description") or "",
-        " ".join(job.get("matched_queries") or []),
     ])
     blocker_evidence = {
         name: evidence
         for name, pattern in HARD_BLOCKERS
-        if (evidence := evidence_for(pattern, text)) is not None
+        if (evidence := (requirement_evidence(pattern, text) if name in {"finnish_required", "swedish_citizenship"}
+                         else evidence_for(pattern, text))) is not None
     }
     blockers = list(blocker_evidence)
     signals = [name for name, pattern in STRONG_SIGNALS if matches(pattern, text)]
@@ -76,7 +78,8 @@ def screen(job: dict) -> dict:
     if "software" in signals and ("ai" in signals or "automation" in signals or "power_platform" in signals):
         score += 10
     if blockers:
-        decision = "exclude"
+        # These are requirement signals; no verified candidate profile is supplied here.
+        decision = "review"
     elif score >= 35:
         decision = "worth_applying"
     elif score >= 18:
@@ -105,7 +108,7 @@ def main() -> None:
     rows.sort(key=lambda row: ({"worth_applying": 0, "review": 1, "exclude": 2}[row["decision"]], -row["score"], row["published_at"] or ""), reverse=False)
     OUT_JSON.write_text(json.dumps({"count": len(rows), "rows": rows}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     with OUT_CSV.open("w", encoding="utf-8-sig", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(rows[0].keys()))
+        writer = csv.DictWriter(handle, fieldnames=list(rows[0].keys()) if rows else ["decision", "score", "title"])
         writer.writeheader()
         for row in rows:
             writer.writerow({**row, "signals": ", ".join(row["signals"]), "blockers": ", ".join(row["blockers"]), "matched_queries": ", ".join(row["matched_queries"])})

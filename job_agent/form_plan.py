@@ -34,7 +34,7 @@ def plan_form(controls: list[FormControl], profile: dict[str, str],
     fields = []
     unresolved = []
     for control in controls:
-        if control.kind not in {"text", "email", "url", "file", "choice"}:
+        if control.kind not in {"text", "email", "url", "file", "choice", "textarea"}:
             unresolved.append(f"unsupported control: {control.label}")
             continue
         eligibility_kind = (eligibility_question_ids or {}).get(control.label)

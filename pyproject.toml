@@ -6,6 +6,14 @@ requires-python = ">=3.11"
 
 [project.scripts]
 job-discover = "job_agent.discover_cli:main"
+job-run = "job_agent.run_cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["job_agent*", "scripts*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -9,6 +9,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from job_agent.models import Job
+from job_agent.time_utils import is_recent
 from .base import FetchResult, QueryResult
 
 
@@ -86,8 +87,10 @@ class PublicBoardSource:
         jobs = [self._normalize(row) for row in rows]
         jobs = [job for job in jobs if _matches(job, queries)
                 and job.location_status != "outside_sweden"
-                and (not published_after or not job.published_at or job.published_at >= published_after)]
-        return FetchResult(self.name, [QueryResult(" | ".join(queries) or "all", jobs[:limit_per_query], len(jobs), pages)])
+                and is_recent(job.published_at, published_after)]
+        return FetchResult(self.name, [QueryResult(" | ".join(queries) or "all", jobs[:limit_per_query], len(jobs), pages,
+                           "truncated" if len(jobs) > limit_per_query else "ok",
+                           date_unknown=sum(not job.published_at for job in jobs[:limit_per_query]))])
 
     def _normalize(self, row):
         now = datetime.now(timezone.utc).isoformat()
@@ -96,8 +99,8 @@ class PublicBoardSource:
             return Job(str(row.get("id", "")), self.board, row.get("title", ""),
                        (row.get("location") or {}).get("name", ""), _plain(row.get("content", "")),
                        self.name, url, url, "greenhouse", str(row.get("id", "")),
-                       row.get("updated_at", ""), now,
-                       _location_status((row.get("location") or {}).get("name", "")))
+                       "", now,
+                       _location_status((row.get("location") or {}).get("name", "")), row.get("updated_at", ""))
         if self.provider in {"lever", "lever-global"}:
             url = row.get("hostedUrl", "")
             created = row.get("createdAt")

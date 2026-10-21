@@ -12,10 +12,19 @@ async function inspectAshby(page) {
       const input = entry.querySelector("input:not([type=hidden]), textarea, select");
       const choices = entry.querySelector(".ashby-application-form-input-yesno");
       const kind = choices ? "choice" : input?.type === "file" ? "file" :
+        input?.tagName === "TEXTAREA" ? "textarea" :
         ["text", "email", "url"].includes(input?.type) ? input.type : "unknown";
       return { index, label: title?.textContent?.trim() || "", required: Boolean(title?.className?.includes("_required_")),
         kind, choices: choices ? Array.from(choices.querySelectorAll("button[data-option]"), b => b.dataset.option) : [] };
     }));
+}
+
+function choiceValue(control, value) {
+  const raw = String(value).trim().toLowerCase();
+  const mapped = ({ ja: "yes", nej: "no" })[raw] || raw;
+  if (control.choices.includes(raw)) return raw;
+  if (control.choices.includes(mapped)) return mapped;
+  return null;
 }
 
 /** Fail closed before interacting with any form control. */
@@ -36,8 +45,8 @@ function validateManifest(controls, manifest) {
     labels.add(control.label);
     const field = manifest.fields.find(item => item.label === control.label);
     if (!field && control.required) throw new Error(`required answer missing: ${control.label}`);
-    if (field && (!field.value || !field.source || (control.kind === "choice" &&
-        !control.choices.includes(field.value.toLowerCase())))) throw new Error(`invalid answer: ${control.label}`);
+    if (field && (typeof field.value !== "string" || !field.value.trim() || !field.source || (control.kind === "choice" &&
+        choiceValue(control, field.value) === null))) throw new Error(`invalid answer: ${control.label}`);
   }
   for (const field of manifest.fields) {
     if (!labels.has(field.label)) throw new Error(`form changed or field missing: ${field.label}`);
@@ -74,12 +83,14 @@ async function fillAshbyPreview(page, manifest) {
       throw new Error(`form changed while filling: ${control.label}`);
     }
     if (control.kind === "choice") {
-      await entry.locator(`button[data-option="${field.value.toLowerCase()}"]`).click();
+      const value = choiceValue(control, field.value);
+      if (!["yes", "no", "ja", "nej"].includes(value)) throw new Error("unsupported choice value");
+      await entry.locator(`button[data-option="${value}"]`).click();
     } else if (control.kind === "file") {
       const file = path.resolve(field.value);
       await entry.locator("input[type=file]").setInputFiles(file);
     } else {
-      await entry.locator(`input[type="${control.kind}"]`).fill(field.value);
+      await entry.locator(control.kind === "textarea" ? "textarea" : `input[type="${control.kind}"]`).fill(field.value);
     }
   }
   const observed = await page.evaluate(() => Array.from(document.querySelectorAll(".ashby-application-form-field-entry"))
@@ -92,10 +103,10 @@ async function fillAshbyPreview(page, manifest) {
     if (!field) continue;
     const actual = observed.find(item => item.label === control.label)?.value;
     const expected = control.kind === "file" ? path.basename(field.value) :
-      control.kind === "choice" ? field.value.toLowerCase() : field.value;
+      control.kind === "choice" ? choiceValue(control, field.value) : field.value;
     if (actual !== expected) throw new Error(`filled value could not be verified: ${control.label}`);
   }
   return observed.map(item => ({ ...item, source: manifest.fields.find(f => f.label === item.label)?.source || "" }));
 }
 
-module.exports = { inspectAshby, validateManifest, fillAshbyPreview };
+module.exports = { inspectAshby, validateManifest, fillAshbyPreview, choiceValue };
