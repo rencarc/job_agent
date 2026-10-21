@@ -8,7 +8,7 @@ NEGATED_OR_PREFERRED = re.compile(
     r"|\b(?:preferred|optional|advantage(?:ous)?|beneficial|plus|bonus|meriterande)\b|nice.to.have|good.to.have|highly valued|önskvärt"
     r"|(?:krävs|krav).*inte|inte.*(?:krav|nödvändigt)", re.I)
 REQUIRED = re.compile(r"\b(?:required|mandatory|must|require|requires|fluent|native|essential)\b"
-                      r"|krävs|ett krav|måste|finsktalande|flytande", re.I)
+                      r"|krävs|ett krav|måste|finsktalande|flytande|obehindr(?:ad|at|ade)", re.I)
 
 LANGUAGES = {"en": r"\benglish\b|\bengelska\b", "sv": r"\bswedish\b|\bsvenska\b",
              "fi": r"\bfinnish\b|\bfinska\b|\bfinsktalande\b", "da": r"\bdanish\b|\bdanska\b",
@@ -21,8 +21,8 @@ LEVELS = {"basic": 1, "intermediate": 2, "professional": 3, "fluent": 4, "native
 def language_level(text: str) -> str | None:
     for level, pattern in (
         ("native", r"native|mother tongue|modersmål"),
-        ("fluent", r"fluen\w*|flytande|obehindrat|excellent|utmärkt"),
-        ("professional", r"professional|professionell|business.level|working proficiency"),
+        ("fluent", r"fluen\w*|flytande|obehindr(?:ad|at|ade)|excellent|utmärkt"),
+        ("professional", r"professional|professionell|business.level|working proficiency|mycket god(?:a)? (?:förmåga|kunskaper|språkkunskaper)"),
         ("intermediate", r"intermediate|medelgod"),
         ("basic", r"basic|grundläggande"),
     ):
@@ -53,7 +53,7 @@ def language_requirements(text: str) -> list[dict]:
                     state = "required"
                 elif len(parts) > 1 and REQUIRED.search(sentence) and not NEGATED_OR_PREFERRED.search(sentence):
                     state = "required"
-                elif re.search(r"skills|proficiency|spoken|written|speaking|kunskaper|språk", part, re.I):
+                elif re.search(r"skills|proficiency|spoken|written|speaking|kunskaper|språk|förmåga|uttrycka", part, re.I):
                     state = "uncertain"
                 else:
                     state = "mentioned"

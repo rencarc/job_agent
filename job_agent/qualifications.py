@@ -20,6 +20,26 @@ TECHNOLOGIES = {
 }
 
 
+def section_lines(text: str):
+    """Retain explicit optional sections until another recognized section starts."""
+    section = "other"
+    optional = re.compile(r"^(?:meriterande|det är (?:även )?meriterande|även meriterande|highly meritorious|nice.to.have"
+                          r"|preferred qualifications|preferred skills|desirable|det är särskilt värdefullt)", re.I)
+    required = re.compile(r"^(?:requirements|essential requirements|required skills|mandatory requirements|must.have"
+                          r"|måste ha|krav|obligatoriska krav|kvalifikationer|vi söker dig som|din profil.*skall.?krav"
+                          r"|du behöver ha|för att.*behöver du|your background and skills)", re.I)
+    other = re.compile(r"^(?:what we offer|benefits|why join|about us|om oss|vi erbjuder|arbetsuppgifter|personliga egenskaper)", re.I)
+    for raw in text.splitlines():
+        line = " ".join(raw.split())
+        if optional.search(line):
+            section = "optional"
+        elif required.search(line) or re.search(r"\bdu behöver ha\b", line, re.I):
+            section = "required"
+        elif other.search(line):
+            section = "other"
+        yield line, section
+
+
 def technical_seniority_evidence(title: str, text: str) -> list[str]:
     reasons = []
     if re.search(r"\b(?:senior|sr\.?|staff|principal|lead|chief)\b|head of", title, re.I):
@@ -29,7 +49,8 @@ def technical_seniority_evidence(title: str, text: str) -> list[str]:
         reasons.append("senior technical role in description needs review: " + body_role.group(0))
     number = r"\d{1,2}|" + "|".join(YEAR_VALUES)
     years_pattern = r"\b(" + number + r")\s*\+?\s*\)?\s*(?:years|års?|år)\b"
-    for clause in re.split(r"[!?;\n]|\.(?=\s|$)", text):
+    mandatory_text = "\n".join(line for line, section in section_lines(text) if section != "optional")
+    for clause in re.split(r"[!?;\n]|\.(?=\s|$)", mandatory_text):
         if NEGATED_OR_PREFERRED.search(clause):
             continue
         years = re.search(years_pattern, clause, re.I)
@@ -46,15 +67,10 @@ def required_skill_gaps(text: str, profile: dict) -> list[dict]:
     supported = [term for term in profile["skills"]]
     supported += [alias for terms in profile.get("skill_aliases", {}).values() for alias in terms]
     known = {name for name, rx in TECHNOLOGIES.items() if any(re.search(rx, term, re.I) for term in supported)}
-    active, evidence = False, []
-    for raw in text.splitlines():
-        line = " ".join(raw.split())
-        if re.search(r"requirements|required skills|must.have|skall.?krav|du behöver ha|technical stack.*requirements", line, re.I):
-            active = True
-        if re.search(r"^what we offer|^benefits|^why join|^about us|^meriterande|^highly meritorious|även meriterande", line, re.I):
-            active = False
+    evidence = []
+    for line, section in section_lines(text):
         explicit = bool(re.search(r"\b(?:must|required|mandatory)\b|du behöver|krävs", line, re.I))
-        if not (active or explicit) or NEGATED_OR_PREFERRED.search(line):
+        if section == "optional" or not (section == "required" or explicit) or NEGATED_OR_PREFERRED.search(line):
             continue
         # Do not turn a known alternative (e.g. Python OR Java) into a false gap.
         if re.search(r"\b(?:or|eller)\b", line, re.I) and any(

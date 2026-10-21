@@ -47,6 +47,15 @@ Numeric and common written year counts, production ownership wording and senior
 roles stated inside a description are also review signals for an early-career
 profile. These checks remain heuristic and need independent evaluation labels.
 
+Explicit optional sections are retained across lines so a later preferred
+multi-year skill does not become a mandatory experience requirement. Required
+headings embedded inside a paragraph still govern their following bullets.
+Swedish language evidence includes inflected forms such as obehindrad and
+explicit expression-ability clauses. These changes were motivated by a small
+diagnostic review, not an independent accuracy benchmark. Add target-title and
+skill vocabulary only when supported by the candidate's actual career facts;
+do not lower all thresholds to promote a single interesting posting.
+
 JobTech publication deadlines and removal status are retained. Deadline/removal
 checks run again even when matching is cached; an elapsed structured deadline
 suppresses preparation. Conflicting body/structured deadlines become exceptions,

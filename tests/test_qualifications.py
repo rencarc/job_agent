@@ -4,6 +4,25 @@ from test_automation import profile
 
 
 class QualificationTests(unittest.TestCase):
+    def test_embedded_required_heading_applies_to_following_bullets(self):
+        text = "Vem vi söker Vi söker en utvecklare. Du behöver ha praktisk erfarenhet av:\nC# och .NET.\nReact och Blazor.\nMeriterande\nKubernetes."
+        evidence = required_skill_gaps(text, profile())
+        self.assertEqual({e["skill"] for e in evidence}, {"C#", ".NET", "React", "Blazor"})
+
+    def test_optional_section_years_do_not_become_mandatory(self):
+        text = "Skall krav\nPython.\nMeriterande\nMinst 5 års erfarenhet av utveckling i AWS-miljö."
+        self.assertEqual(technical_seniority_evidence("AI Developer", text), [])
+
+    def test_required_section_after_optional_section_is_restored(self):
+        text = "Meriterande\nMinst 5 års erfarenhet av Python.\nObligatoriska krav\nMinst 3 års erfarenhet av systemutveckling."
+        evidence = technical_seniority_evidence("AI Developer", text)
+        self.assertEqual(len(evidence), 1)
+        self.assertIn("3", evidence[0])
+
+    def test_swedish_must_have_heading_activates_technical_requirements(self):
+        evidence = required_skill_gaps("Måste ha\nC# och CI/CD\nMeriterande\nKubernetes", profile())
+        self.assertEqual({e["skill"] for e in evidence}, {"C#", "CI/CD"})
+
     def test_required_delivery_and_version_control_are_not_ignored(self):
         text = "Din profil (Skall krav)\nErfarenhet av CI/CD-processer och versionshantering."
         evidence = required_skill_gaps(text, profile())

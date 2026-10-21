@@ -21,7 +21,7 @@ from .qualifications import required_skill_gaps, technical_seniority_evidence
 from .requirements import LEVELS, assess_languages
 from .store import JobStore, content_hash, digest
 
-RULE_VERSION = "profile-rules-7"
+RULE_VERSION = "profile-rules-9"
 
 
 @dataclass(frozen=True)

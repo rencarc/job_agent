@@ -7,6 +7,18 @@ from test_automation import job, profile
 
 
 class LanguageMatchingTests(unittest.TestCase):
+    def test_swedish_adjective_variants_apply_to_both_languages(self):
+        reasons, evidence = assess_languages("Är obehindrad i både svenska och engelska i tal och skrift.",
+                                            ["sv", "en"], {"sv": "intermediate", "en": "fluent"})
+        self.assertEqual(len(reasons), 1)
+        self.assertIn("sv: intermediate vs fluent", reasons[0])
+        self.assertEqual({e["language"] for e in evidence}, {"sv", "en"})
+
+    def test_swedish_expression_ability_is_not_merely_a_language_mention(self):
+        reasons, _ = assess_languages("Mycket god förmåga att uttrycka dig på svenska i tal och skrift.",
+                                     ["sv"], {"sv": "intermediate"})
+        self.assertTrue(reasons)
+
     def test_fluent_english_clears_known_fluent_english(self):
         reasons, evidence = assess_languages("Fluent English is required.", ["en"], {"en": "fluent"})
         self.assertEqual(reasons, [])
